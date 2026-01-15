@@ -1,0 +1,98 @@
+.budgets-page {
+  padding: 16px;
+}
+
+.budget-detail {
+  padding: 16px 0;
+}
+
+/* 进度条样式 */
+.ant-progress-line {
+  margin-bottom: 8px;
+}
+
+/* 超支标签样式 */
+.ant-tag {
+  margin-right: 4px;
+}
+
+/* 统计卡片样式 */
+.ant-statistic-title {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 表格样式优化 */
+.ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+/* 操作按钮样式 */
+.ant-btn-text {
+  padding: 4px 8px;
+}
+
+/* 表单样式 */
+.ant-form-item {
+  margin-bottom: 16px;
+}
+
+/* 描述列表样式 */
+.ant-descriptions-item-label {
+  font-weight: 600;
+  background-color: #fafafa;
+}
+
+.ant-descriptions-item-content {
+  background-color: #fff;
+}
+
+/* 进度条颜色 */
+.progress-success {
+  color: #52c41a;
+}
+
+.progress-warning {
+  color: #ff9800;
+}
+
+.progress-danger {
+  color: #ff4d4f;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .budgets-page {
+    padding: 8px;
+  }
+  
+  .ant-col {
+    margin-bottom: 8px;
+  }
+  
+  .ant-table {
+    font-size: 12px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 18px;
+  }
+  
+  .ant-descriptions-item {
+    display: block;
+    width: 100%;
+  }
+  
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content {
+    display: block;
+    width: 100%;
+    padding: 8px;
+  }
+}

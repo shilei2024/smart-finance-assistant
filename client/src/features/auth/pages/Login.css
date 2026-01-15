@@ -1,0 +1,220 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideInUp 0.6s ease-out;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.login-form {
+  margin-bottom: 24px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.forgot-password {
+  color: #1890ff;
+  font-size: 14px;
+  transition: color 0.3s;
+}
+
+.forgot-password:hover {
+  color: #40a9ff;
+}
+
+.social-login-btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.social-login-btn.wechat {
+  background-color: #07c160;
+  border-color: #07c160;
+  color: white;
+}
+
+.social-login-btn.wechat:hover {
+  background-color: #06ad56;
+  border-color: #06ad56;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
+}
+
+.social-login-btn.alipay {
+  background-color: #1677ff;
+  border-color: #1677ff;
+  color: white;
+}
+
+.social-login-btn.alipay:hover {
+  background-color: #0958d9;
+  border-color: #0958d9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  color: #666;
+  font-size: 14px;
+}
+
+.login-footer a {
+  color: #1890ff;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.login-footer a:hover {
+  color: #40a9ff;
+}
+
+.login-features {
+  margin-left: 60px;
+  max-width: 500px;
+  animation: fadeIn 0.8s ease-out 0.3s both;
+}
+
+.login-features h2 {
+  font-size: 32px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 32px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.feature-item {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  transition: all 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.feature-item:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.feature-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+}
+
+.feature-item h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.feature-item p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+/* 动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+  .login-container {
+    flex-direction: column;
+    padding: 40px 20px;
+  }
+  
+  .login-features {
+    margin-left: 0;
+    margin-top: 40px;
+    max-width: 100%;
+  }
+  
+  .login-features h2 {
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-card {
+    max-width: 100%;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .login-header h1 {
+    font-size: 24px;
+  }
+  
+  .login-features h2 {
+    font-size: 24px;
+  }
+}

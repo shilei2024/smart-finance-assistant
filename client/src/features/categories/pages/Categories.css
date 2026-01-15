@@ -1,0 +1,10 @@
+.categories-page {
+  padding: 16px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .categories-page {
+    padding: 8px;
+  }
+}

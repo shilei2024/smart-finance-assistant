@@ -1,0 +1,191 @@
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.register-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideInUp 0.6s ease-out;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.register-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.register-header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.register-form {
+  margin-bottom: 24px;
+}
+
+.terms-link {
+  color: #1890ff;
+  margin: 0 4px;
+  transition: color 0.3s;
+}
+
+.terms-link:hover {
+  color: #40a9ff;
+}
+
+.register-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  color: #666;
+  font-size: 14px;
+}
+
+.register-footer a {
+  color: #1890ff;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.register-footer a:hover {
+  color: #40a9ff;
+}
+
+.register-benefits {
+  margin-left: 60px;
+  max-width: 500px;
+  animation: fadeIn 0.8s ease-out 0.3s both;
+}
+
+.register-benefits h2 {
+  font-size: 32px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 32px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.benefit-item:hover {
+  transform: translateX(8px);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.benefit-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.benefit-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.benefit-content p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+  .register-container {
+    flex-direction: column;
+    padding: 40px 20px;
+  }
+  
+  .register-benefits {
+    margin-left: 0;
+    margin-top: 40px;
+    max-width: 100%;
+  }
+  
+  .register-benefits h2 {
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .register-card {
+    max-width: 100%;
+  }
+  
+  .register-header h1 {
+    font-size: 24px;
+  }
+  
+  .register-benefits h2 {
+    font-size: 24px;
+  }
+  
+  .benefit-item {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .benefit-icon {
+    margin-bottom: 12px;
+  }
+}

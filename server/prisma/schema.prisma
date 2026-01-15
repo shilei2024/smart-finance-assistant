@@ -1,0 +1,228 @@
+// 智能记账助手 - PostgreSQL Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  phone           String?   @unique
+  password        String
+  name            String
+  avatar          String?
+  role            String    @default("USER")  // 使用字符串代替枚举
+  status          String    @default("ACTIVE") // 使用字符串代替枚举
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 关系
+  sessions        Session[]
+  accounts        Account[]
+  transactions    Transaction[]
+  budgets         Budget[]
+  categories      Category[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  verificationCodes VerificationCode[]
+
+  @@map("users")
+}
+
+// 会话表
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  accessToken   String   @unique
+  refreshToken  String   @unique
+  userAgent     String?
+  ipAddress     String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  // 关系
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// 账户表（简化版）
+model Account {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  type           String   @default("CASH") // 使用字符串代替枚举
+  currency       String   @default("CNY")  // 使用字符串代替枚举
+  balance        Float    @default(0)
+  initialBalance Float    @default(0)
+  status         String   @default("ACTIVE") // 使用字符串代替枚举
+  description    String?
+  color          String?  @default("#1890ff")
+  icon           String?
+  isDefault      Boolean  @default(false)
+  isShared       Boolean  @default(false)
+  bankName       String?
+  accountNumber  String?
+  cardNumber     String?
+  cardHolder     String?
+  expiryDate     String?
+  cvv            String?
+  creditLimit    Float?
+  billingDay     Int?
+  dueDay         Int?
+  investmentType String?
+  riskLevel      String?
+  loanAmount     Float?
+  interestRate   Float?
+  loanTerm       Int?
+  startDate      DateTime?
+  endDate        DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // 关系
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions         Transaction[] @relation("AccountTransactions")
+  transferTransactions Transaction[] @relation("AccountTransfers")
+
+  @@map("accounts")
+}
+
+// 分类表
+model Category {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  type          String   @default("EXPENSE") // 使用字符串代替枚举
+  icon          String?
+  color         String?
+  description   String?
+  parentId      String?
+  isSystem      Boolean  @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关系
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Category? @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children      Category[] @relation("CategoryToCategory")
+  transactions  Transaction[]
+  budgets       Budget[]
+
+  @@map("categories")
+}
+
+// 交易表（简化版）
+model Transaction {
+  id              String   @id @default(cuid())
+  userId          String
+  accountId       String
+  toAccountId     String?
+  categoryId      String?
+  type            String   @default("EXPENSE") // 使用字符串代替枚举
+  amount          Float
+  currency        String   @default("CNY")
+  description     String
+  transactionDate DateTime @default(now())
+  status          String   @default("COMPLETED") // 使用字符串代替枚举
+  location        String?
+  tags            String?  // 使用逗号分隔的字符串代替数组
+  attachmentUrls  String?  // 使用逗号分隔的字符串代替数组
+  notes           String?
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关系
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         Account  @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Cascade)
+  toAccount       Account? @relation("AccountTransfers", fields: [toAccountId], references: [id], onDelete: SetNull)
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("transactions")
+}
+
+// 预算表（简化版）
+model Budget {
+  id              String   @id @default(cuid())
+  userId          String
+  categoryId      String?
+  name            String
+  period          String   @default("MONTHLY") // 使用字符串代替枚举
+  amount          Float
+  startDate       DateTime
+  endDate         DateTime
+  description     String?
+  spentAmount     Float    @default(0)
+  remainingAmount Float    @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关系
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("budgets")
+}
+
+// 通知表（简化版）
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // 使用字符串代替枚举
+  title     String
+  content   String
+  status    String   @default("UNREAD") // 使用字符串代替枚举
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // 关系
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// 审计日志表（简化版）
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // 关系
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+// 验证码表
+model VerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      String   // PASSWORD_RESET, EMAIL_VERIFICATION, PHONE_VERIFICATION
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // 关系
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_codes")
+}

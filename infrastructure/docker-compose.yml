@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: smart-finance-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: smart_finance
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smart-finance-network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: smart-finance-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redispass
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smart-finance-network
+
+  # MinIO对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: smart-finance-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - smart-finance-network
+
+  # 后端API服务
+  backend:
+    build:
+      context: ../server
+      dockerfile: Dockerfile.dev
+    container_name: smart-finance-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://admin:password@postgres:5432/smart_finance
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redispass
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: password
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../server:/app
+      - /app/node_modules
+    command: npm run start:dev
+    networks:
+      - smart-finance-network
+
+  # 前端Web应用
+  frontend:
+    build:
+      context: ../client
+      dockerfile: Dockerfile.dev
+    container_name: smart-finance-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../client:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:3000/api/v1
+      VITE_WS_URL: ws://localhost:3000
+    command: npm run dev
+    networks:
+      - smart-finance-network
+
+  # Traefik反向代理（可选）
+  traefik:
+    image: traefik:v3.0
+    container_name: smart-finance-traefik
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./docker/traefik/config:/etc/traefik/config
+    networks:
+      - smart-finance-network
+
+  # PgAdmin数据库管理（可选）
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smart-finance-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@smartfinance.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - smart-finance-network
+
+  # RedisInsight Redis管理（可选）
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: smart-finance-redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/db
+    networks:
+      - smart-finance-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  pgadmin_data:
+  redisinsight_data:
+
+networks:
+  smart-finance-network:
+    driver: bridge

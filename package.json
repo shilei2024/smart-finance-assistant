@@ -1,0 +1,84 @@
+{
+  "name": "smart-finance-assistant",
+  "version": "1.0.0",
+  "description": "智能记账助手 - 个人财务管理应用",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "mobile",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspaces",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "test": "npm run test --workspaces",
+    "test:client": "npm run test --workspace=client",
+    "test:server": "npm run test --workspace=server",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "docker:up": "docker-compose -f infrastructure/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infrastructure/docker-compose.yml down",
+    "docker:logs": "docker-compose -f infrastructure/docker-compose.yml logs -f",
+    "db:migrate": "npm run db:migrate --workspace=server",
+    "db:seed": "npm run db:seed --workspace=server",
+    "db:reset": "npm run db:reset --workspace=server",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "keywords": [
+    "finance",
+    "accounting",
+    "budget",
+    "ai",
+    "react",
+    "nestjs",
+    "typescript"
+  ],
+  "author": "Smart Finance Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/smart-finance-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/smart-finance-assistant/issues"
+  },
+  "homepage": "https://smartfinance.example.com",
+  "main": ".eslintrc.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-typescript": "^17.1.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-import-resolver-node": "^0.3.9",
+    "eslint-module-utils": "^2.12.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-scope": "^7.2.2",
+    "eslint-visitor-keys": "^3.4.3",
+    "prettier": "^3.7.4",
+    "prettier-linter-helpers": "^1.0.1"
+  },
+  "type": "commonjs"
+}

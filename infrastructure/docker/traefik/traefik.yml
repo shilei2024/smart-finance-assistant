@@ -1,0 +1,52 @@
+# Traefik配置
+api:
+  dashboard: true
+  debug: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: smart-finance-network
+  file:
+    directory: /etc/traefik/config
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@smartfinance.com
+      storage: /etc/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO
+  format: common
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: common
+
+metrics:
+  prometheus:
+    entryPoint: web
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+tracing:
+  jaeger:
+    samplingServerURL: http://localhost:5778/sampling
+    samplingType: const
+    samplingParam: 1.0

@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+dist/
+build/
+out/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Prisma
+prisma/migrations/
+
+# Build artifacts
+.next/
+.nuxt/
+.cache/
+.parcel-cache/

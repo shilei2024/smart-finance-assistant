@@ -1,0 +1,77 @@
+# 生产环境Dockerfile - 多阶段构建
+FROM node:18-alpine AS builder
+
+# 安装必要的系统依赖
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制package.json文件
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
+# 安装pnpm
+RUN npm install -g pnpm@8
+
+# 安装依赖（包括devDependencies，因为需要构建）
+RUN pnpm install --frozen-lockfile
+
+# 复制源代码
+COPY . .
+
+# 生成Prisma客户端
+RUN npx prisma generate
+
+# 构建应用
+RUN pnpm run build
+
+# 清理devDependencies
+RUN pnpm prune --prod
+
+# 生产环境镜像
+FROM node:18-alpine AS production
+
+# 安装必要的系统依赖
+RUN apk add --no-cache \
+    openssl \
+    bash \
+    curl
+
+# 创建非root用户
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
+
+# 设置工作目录
+WORKDIR /app
+
+# 从builder阶段复制node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+
+# 从builder阶段复制构建产物
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/pnpm-lock.yaml ./pnpm-lock.yaml
+
+# 复制Prisma schema和客户端
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+
+# 复制必要的配置文件
+COPY --chown=nestjs:nodejs .env.example .env.example
+
+# 切换到非root用户
+USER nestjs
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# 暴露端口
+EXPOSE 3000
+
+# 启动命令
+CMD ["node", "dist/main.js"]
