@@ -2,14 +2,45 @@
 
 ## 📋 目录
 
-1. [服务器环境准备](#服务器环境准备)
-2. [项目部署流程](#项目部署流程)
-3. [环境变量配置](#环境变量配置)
-4. [数据库初始化](#数据库初始化)
-5. [域名和SSL配置](#域名和ssl配置)
-6. [后续开发流程](#后续开发流程)
-7. [监控和维护](#监控和维护)
-8. [故障排查](#故障排查)
+1. [端口映射说明](#端口映射说明)
+2. [服务器环境准备](#服务器环境准备)
+3. [项目部署流程](#项目部署流程)
+4. [环境变量配置](#环境变量配置)
+5. [数据库初始化](#数据库初始化)
+6. [域名和SSL配置](#域名和ssl配置)
+7. [后续开发流程](#后续开发流程)
+8. [监控和维护](#监控和维护)
+9. [故障排查](#故障排查)
+
+> 💡 **提示**：详细的端口映射说明请查看 [端口映射文档](./PORT_MAPPING.md)
+
+---
+
+## 🔌 端口映射说明
+
+为了避免与华为云服务器上其他应用冲突，本项目使用了非标准端口映射：
+
+| 服务 | 容器内部端口 | 外部映射端口 | 说明 |
+|------|------------|------------|------|
+| 后端API | 3000 | **30080** | 后端服务端口 |
+| 前端应用 | 80/5173 | **30081** | 前端服务端口 |
+| PostgreSQL | 5432 | **15432** | 数据库端口 |
+| Redis | 6379 | **16379** | 缓存端口 |
+| MinIO API | 9000 | **19000** | 对象存储API |
+| MinIO Console | 9001 | **19001** | 对象存储控制台 |
+| PgAdmin | 80 | **15050** | 数据库管理工具 |
+| RedisInsight | 5540 | **15540** | Redis管理工具 |
+| Prometheus | 9090 | **19090** | 监控服务 |
+| Grafana | 3000 | **13001** | 监控面板 |
+| Traefik HTTP | 80 | **30082** | 反向代理（开发环境） |
+| Traefik HTTPS | 443 | **30083** | 反向代理（开发环境） |
+| Traefik Dashboard | 8080 | **30084** | 反向代理面板 |
+
+**重要提示：**
+- 容器内部端口保持不变（如后端仍使用3000）
+- 外部访问使用映射端口（如后端访问使用30080）
+- 容器间通信使用服务名和内部端口（如 `postgres:5432`）
+- 从宿主机访问使用外部映射端口（如 `localhost:30080`）
 
 ---
 
@@ -68,17 +99,33 @@ docker-compose --version
 
 ```bash
 # Ubuntu (UFW)
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
+sudo ufw allow 22/tcp      # SSH
+sudo ufw allow 30080/tcp   # 后端API
+sudo ufw allow 30081/tcp   # 前端应用
+sudo ufw allow 15432/tcp   # PostgreSQL（如需要外部访问）
+sudo ufw allow 16379/tcp   # Redis（如需要外部访问）
+sudo ufw allow 19000/tcp   # MinIO API（如需要外部访问）
+sudo ufw allow 19001/tcp   # MinIO Console（如需要外部访问）
 sudo ufw enable
 
 # CentOS (firewalld)
 sudo firewall-cmd --permanent --add-port=22/tcp
-sudo firewall-cmd --permanent --add-port=80/tcp
-sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --permanent --add-port=30080/tcp
+sudo firewall-cmd --permanent --add-port=30081/tcp
+sudo firewall-cmd --permanent --add-port=15432/tcp
+sudo firewall-cmd --permanent --add-port=16379/tcp
+sudo firewall-cmd --permanent --add-port=19000/tcp
+sudo firewall-cmd --permanent --add-port=19001/tcp
 sudo firewall-cmd --reload
 ```
+
+**端口说明：**
+- `30080`: 后端API服务端口
+- `30081`: 前端应用端口
+- `15432`: PostgreSQL数据库端口（容器内部仍为5432）
+- `16379`: Redis缓存端口（容器内部仍为6379）
+- `19000`: MinIO API端口（容器内部仍为9000）
+- `19001`: MinIO控制台端口（容器内部仍为9001）
 
 #### 2.5 创建部署用户（可选，推荐）
 
@@ -130,16 +177,21 @@ nano .env.production
 NODE_ENV=production
 APP_NAME=smart-finance-assistant
 APP_PORT=3000
+# 注意：容器内部端口为3000，外部映射为30080
 APP_URL=https://your-domain.com
 
 # 数据库配置
 POSTGRES_USER=smart_finance_user
 POSTGRES_PASSWORD=your_secure_password_here
 POSTGRES_DB=smart_finance
+# 容器内部连接（Docker Compose环境）
 DATABASE_URL=postgresql://smart_finance_user:your_secure_password_here@postgres:5432/smart_finance
+# 外部连接（从宿主机连接）
+# DATABASE_URL=postgresql://smart_finance_user:your_secure_password_here@localhost:15432/smart_finance
 
 # Redis配置
 REDIS_HOST=redis
+# 容器内部端口为6379，外部映射为16379
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password_here
 
@@ -212,7 +264,7 @@ docker-compose -f docker-compose.prod.yml exec backend npm run db:seed
 docker-compose -f docker-compose.prod.yml ps
 
 # 检查后端健康
-curl http://localhost:3000/health
+curl http://localhost:30080/health
 
 # 查看日志
 docker-compose -f docker-compose.prod.yml logs -f backend
@@ -316,9 +368,9 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
-    # 前端
+    # 前端（如果使用Docker，映射到30081端口）
     location / {
-        proxy_pass http://localhost:80;
+        proxy_pass http://localhost:30081;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -327,7 +379,7 @@ server {
 
     # 后端API
     location /api {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:30080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -451,7 +503,7 @@ cd /opt/smart-finance-new/infrastructure
 docker-compose -f docker-compose.prod.yml up -d
 
 # 6. 验证新版本
-curl http://localhost:3000/health
+curl http://localhost:30080/health
 
 # 7. 如果一切正常，删除旧版本
 rm -rf /opt/smart-finance
@@ -516,7 +568,7 @@ docker-compose -f docker-compose.prod.yml up -d --no-deps --build frontend
 
 # 7. 健康检查
 sleep 10
-if curl -f http://localhost:3000/health; then
+if curl -f http://localhost:30080/health; then
     echo "✅ 部署成功！"
 else
     echo "❌ 部署失败，回滚..."
@@ -598,7 +650,8 @@ crontab -e
 docker-compose -f docker-compose.prod.yml logs backend
 
 # 检查端口占用
-netstat -tulpn | grep 3000
+netstat -tulpn | grep 30080
+netstat -tulpn | grep 30081
 
 # 检查容器状态
 docker-compose -f docker-compose.prod.yml ps
@@ -643,12 +696,13 @@ docker system prune -a --volumes
 部署后检查：
 
 - [ ] 所有服务正常运行
-- [ ] 健康检查通过
+- [ ] 健康检查通过（http://localhost:30080/health）
 - [ ] 数据库迁移成功
-- [ ] 前端可以访问
-- [ ] API可以访问
+- [ ] 前端可以访问（http://localhost:30081）
+- [ ] API可以访问（http://localhost:30080/api/v1/health）
 - [ ] 日志正常输出
 - [ ] 监控正常
+- [ ] 防火墙端口已开放（30080, 30081等）
 
 ---
 

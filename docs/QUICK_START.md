@@ -68,7 +68,7 @@ chmod +x scripts/*.sh
 docker-compose -f infrastructure/docker-compose.prod.yml ps
 
 # 检查健康状态
-curl http://localhost:3000/health
+curl http://localhost:30080/health
 
 # 查看日志
 docker-compose -f infrastructure/docker-compose.prod.yml logs -f

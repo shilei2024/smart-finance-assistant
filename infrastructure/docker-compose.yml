@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: smart_finance
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -27,12 +27,12 @@ services:
     image: redis:7-alpine
     container_name: smart-finance-redis
     ports:
-      - "6379:6379"
+      - "16379:6379"
     command: redis-server --appendonly yes --requirepass redispass
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,8 +44,8 @@ services:
     image: minio/minio:latest
     container_name: smart-finance-minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "19000:9000"
+      - "19001:9001"
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password
@@ -63,8 +63,8 @@ services:
   # 后端API服务
   backend:
     build:
-      context: ../server
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: server/Dockerfile.dev
     container_name: smart-finance-backend
     depends_on:
       postgres:
@@ -82,10 +82,11 @@ services:
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: password
     ports:
-      - "3000:3000"
+      - "30080:3000"
     volumes:
       - ../server:/app
       - /app/node_modules
+    working_dir: /app
     command: npm run start:dev
     networks:
       - smart-finance-network
@@ -93,18 +94,19 @@ services:
   # 前端Web应用
   frontend:
     build:
-      context: ../client
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: client/Dockerfile.dev
     container_name: smart-finance-frontend
     ports:
-      - "5173:5173"
+      - "30081:5173"
     volumes:
       - ../client:/app
       - /app/node_modules
+    working_dir: /app
     environment:
-      VITE_API_URL: http://localhost:3000/api/v1
-      VITE_WS_URL: ws://localhost:3000
-    command: npm run dev
+      VITE_API_URL: http://localhost:30080/api/v1
+      VITE_WS_URL: ws://localhost:30080
+    command: npm run dev -- --host
     networks:
       - smart-finance-network
 
@@ -113,9 +115,9 @@ services:
     image: traefik:v3.0
     container_name: smart-finance-traefik
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
+      - "30082:80"
+      - "30083:443"
+      - "30084:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml
@@ -131,7 +133,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@smartfinance.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "5050:80"
+      - "15050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
@@ -142,7 +144,7 @@ services:
     image: redis/redisinsight:latest
     container_name: smart-finance-redisinsight
     ports:
-      - "5540:5540"
+      - "15540:5540"
     volumes:
       - redisinsight_data:/db
     networks:

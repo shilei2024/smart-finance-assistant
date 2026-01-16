@@ -59,7 +59,6 @@
     "url": "https://github.com/your-org/smart-finance-assistant/issues"
   },
   "homepage": "https://smartfinance.example.com",
-  "main": ".eslintrc.js",
   "directories": {
     "doc": "docs"
   },

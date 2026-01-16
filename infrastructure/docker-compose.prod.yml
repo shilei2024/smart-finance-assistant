@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ${POSTGRES_DB:-smart_finance}
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -34,12 +34,12 @@ services:
     image: redis:7-alpine
     container_name: smart-finance-redis-prod
     ports:
-      - "6379:6379"
+      - "16379:6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
     volumes:
       - redis_data_prod:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispass}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -58,8 +58,8 @@ services:
     image: minio/minio:latest
     container_name: smart-finance-minio-prod
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "19000:9000"
+      - "19001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-password}
@@ -81,11 +81,11 @@ services:
         reservations:
           memory: 256M
 
-  # 后端API服务
+  # 后端API服务（不直接暴露端口，通过nginx访问）
   backend:
     build:
-      context: ../server
-      dockerfile: Dockerfile.prod
+      context: ..
+      dockerfile: server/Dockerfile.prod
     container_name: smart-finance-backend-prod
     depends_on:
       postgres:
@@ -107,10 +107,10 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       SENTRY_DSN: ${SENTRY_DSN}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -124,27 +124,30 @@ services:
           memory: 1G
         reservations:
           memory: 512M
-      replicas: 2
-      update_config:
-        parallelism: 1
-        delay: 10s
-        order: start-first
-      rollback_config:
-        parallelism: 0
-        order: stop-first
+      # 注意: replicas 仅在 Docker Swarm 模式下有效
+      # 单机部署时，如需多实例，请使用多个服务定义或切换到 Swarm 模式
+      # replicas: 2
+      # update_config:
+      #   parallelism: 1
+      #   delay: 10s
+      #   order: start-first
+      # rollback_config:
+      #   parallelism: 0
+      #   order: stop-first
 
-  # 前端Web应用
+  # 前端Web应用（不直接暴露端口，通过nginx访问）
   frontend:
     build:
-      context: ../client
-      dockerfile: Dockerfile.prod
+      context: ..
+      dockerfile: client/Dockerfile.prod
     container_name: smart-finance-frontend-prod
     depends_on:
-      - backend
-    ports:
-      - "80:80"
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -157,22 +160,25 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-      replicas: 2
-      update_config:
-        parallelism: 1
-        delay: 10s
-        order: start-first
+      # 注意: replicas 仅在 Docker Swarm 模式下有效
+      # replicas: 2
+      # update_config:
+      #   parallelism: 1
+      #   delay: 10s
+      #   order: start-first
 
-  # Nginx负载均衡器
+  # Nginx负载均衡器和反向代理
   nginx:
     image: nginx:alpine
     container_name: smart-finance-nginx-prod
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     ports:
-      - "443:443"
-      - "80:80"
+      - "30080:80"
+      - "30443:443"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx/ssl:/etc/nginx/ssl
@@ -196,7 +202,7 @@ services:
     image: prom/prometheus:latest
     container_name: smart-finance-prometheus-prod
     ports:
-      - "9090:9090"
+      - "19090:9090"
     volumes:
       - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data_prod:/prometheus
@@ -216,7 +222,7 @@ services:
     image: grafana/grafana:latest
     container_name: smart-finance-grafana-prod
     ports:
-      - "3001:3000"
+      - "13001:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
     volumes:

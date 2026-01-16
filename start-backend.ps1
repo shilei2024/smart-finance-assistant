@@ -1,5 +1,8 @@
 # 启动后端服务脚本
-cd d:\Cursor-Project\jizhang\server
+# 获取脚本所在目录的父目录（项目根目录）
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+Set-Location "$projectRoot\server"
 
 Write-Host "检查后端服务..." -ForegroundColor Cyan
 

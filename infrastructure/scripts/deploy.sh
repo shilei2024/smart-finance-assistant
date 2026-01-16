@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# 智能记账助手部署脚本
-# 使用方法: ./deploy.sh [environment]
+# 智能记账助手 - 通用部署脚本（开发/测试/生产）
+# 使用方法: ./deploy.sh [选项]
+# 注意：生产环境部署请使用 scripts/deploy-production.sh（包含备份和回滚功能）
 
 set -e
 
@@ -201,14 +202,16 @@ echo "   环境: $ENVIRONMENT"
 echo "   项目: $COMPOSE_PROJECT_NAME"
 echo ""
 echo "🌐 服务地址:"
-echo "   前端: http://localhost:5173"
-echo "   后端API: http://localhost:3000"
-echo "   API文档: http://localhost:3000/api/docs"
+echo "   前端: http://localhost:30081"
+echo "   后端API: http://localhost:30080"
+echo "   API文档: http://localhost:30080/api/docs"
 echo ""
 echo "🛠️  管理工具:"
-echo "   数据库管理: http://localhost:5050"
-echo "   Redis管理: http://localhost:5540"
-echo "   MinIO控制台: http://localhost:9001"
+echo "   数据库管理: http://localhost:15050"
+echo "   Redis管理: http://localhost:15540"
+echo "   MinIO控制台: http://localhost:19001"
+echo "   Prometheus: http://localhost:19090"
+echo "   Grafana: http://localhost:13001"
 echo ""
 echo "📋 常用命令:"
 echo "   查看日志: docker-compose -f $COMPOSE_PATH logs -f"
@@ -217,7 +220,7 @@ echo "   重启服务: docker-compose -f $COMPOSE_PATH restart"
 echo "   查看状态: docker-compose -f $COMPOSE_PATH ps"
 echo ""
 echo "🔍 健康检查:"
-echo "   应用健康: curl http://localhost:3000/health"
-echo "   前端健康: curl http://localhost:5173/health"
+echo "   应用健康: curl http://localhost:30080/health"
+echo "   前端健康: curl http://localhost:30081/health"
 echo ""
 log_success "部署脚本执行完成！"

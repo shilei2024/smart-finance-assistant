@@ -102,7 +102,7 @@ health_check() {
     attempt=0
     
     while [ $attempt -lt $max_attempts ]; do
-        if curl -f http://localhost:3000/health &> /dev/null; then
+        if curl -f http://localhost:30080/health &> /dev/null; then
             log_success "健康检查通过"
             return 0
         fi

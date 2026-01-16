@@ -5,20 +5,16 @@ FROM node:18-alpine AS development
 WORKDIR /app
 
 # 复制package.json文件
-COPY package*.json ./
-COPY pnpm-lock.yaml ./
+COPY client/package*.json ./
 
-# 安装pnpm
-RUN npm install -g pnpm@8
-
-# 安装依赖
-RUN pnpm install --frozen-lockfile
+# 安装依赖（使用npm）
+RUN npm install
 
 # 复制源代码
-COPY . .
+COPY client/ .
 
 # 暴露端口
 EXPOSE 5173
 
 # 启动命令
-CMD ["pnpm", "run", "dev", "--host"]
+CMD ["npm", "run", "dev", "--", "--host"]
