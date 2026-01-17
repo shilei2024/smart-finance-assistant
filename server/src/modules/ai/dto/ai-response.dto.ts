@@ -142,6 +142,7 @@ export class OcrResponseDto {
   })
   transaction: {
     amount: number;
+    currency?: string;
     date?: string;
     merchant?: string;
     description?: string;
@@ -164,6 +165,12 @@ export class OcrResponseDto {
     required: false,
   })
   rawText?: string;
+
+  @ApiProperty({
+    description: '处理时间（毫秒）',
+    required: false,
+  })
+  processingTime?: number;
 }
 
 // 重新导出SpeechResponseDto

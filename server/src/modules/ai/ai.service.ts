@@ -510,14 +510,31 @@ ${recentTransactions
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
 
+        // 处理 items，确保符合类型要求
+        const items = parsed.transaction?.items || [];
+        const processedItems = Array.isArray(items)
+          ? items.map((item: any) => {
+              if (typeof item === 'string') {
+                return { name: item, price: 0 };
+              } else if (item && typeof item === 'object') {
+                return {
+                  name: item.name || String(item),
+                  price: item.price || 0,
+                  quantity: item.quantity,
+                };
+              }
+              return { name: String(item), price: 0 };
+            })
+          : [];
+
         return {
           transaction: {
             amount: parsed.transaction?.amount || 0,
             currency: parsed.transaction?.currency || 'CNY',
             merchant: parsed.transaction?.merchant || '未识别',
             description: parsed.transaction?.description || parsed.rawText || '',
-            date: parsed.transaction?.date || null,
-            items: parsed.transaction?.items || [],
+            date: parsed.transaction?.date || undefined,
+            items: processedItems,
           },
           confidence: parsed.confidence || 0.5,
           rawText: parsed.rawText || aiResponse,
@@ -534,7 +551,17 @@ ${recentTransactions
     const transaction = this.extractTransactionFromText(text);
 
     return {
-      transaction,
+      transaction: {
+        ...transaction,
+        // 确保 items 符合类型要求（如果是字符串数组，需要转换）
+        items: Array.isArray(transaction.items) 
+          ? transaction.items.map((item: any) => 
+              typeof item === 'string' 
+                ? { name: item, price: 0 } 
+                : item
+            )
+          : [],
+      },
       confidence,
       rawText: text,
       processingTime: 0,
@@ -563,18 +590,32 @@ ${recentTransactions
    */
   private extractTransactionFromText(text: string): {
     amount: number;
-    currency: string;
-    merchant: string;
-    description: string;
-    date: string | null;
-    items: string[];
+    currency?: string;
+    merchant?: string;
+    description?: string;
+    date?: string;
+    items?: Array<{
+      name: string;
+      price: number;
+      quantity?: number;
+    }>;
   } {
-    const transaction: any = {
+    const transaction: {
+      amount: number;
+      currency?: string;
+      merchant?: string;
+      description?: string;
+      date?: string;
+      items?: Array<{
+        name: string;
+        price: number;
+        quantity?: number;
+      }>;
+    } = {
       amount: 0,
       currency: 'CNY',
       merchant: '未识别',
       description: '',
-      date: null,
       items: [],
     };
 
@@ -601,10 +642,12 @@ ${recentTransactions
     const dateMatch = text.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
     if (dateMatch) {
       transaction.date = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
+    } else {
+      transaction.date = undefined;
     }
 
     // 提取描述（前100个字符）
-    transaction.description = text.substring(0, 100).trim();
+    transaction.description = text.substring(0, 100).trim() || undefined;
 
     return transaction;
   }
