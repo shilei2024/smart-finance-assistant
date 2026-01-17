@@ -130,6 +130,22 @@ deploy() {
     check_file "$COMPOSE_FILE"
     check_file "$ENV_FILE"
     
+    # 检查必需的环境变量
+    log_info "检查环境变量配置..."
+    source "$ENV_FILE" 2>/dev/null || true
+    
+    if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" == "CHANGE_THIS_JWT_SECRET_MIN_32_CHARACTERS" ]; then
+        log_error "JWT_SECRET 未配置或使用默认值，请修改 .env.production 文件"
+        exit 1
+    fi
+    
+    if [ -z "$JWT_REFRESH_SECRET" ] || [ "$JWT_REFRESH_SECRET" == "CHANGE_THIS_JWT_REFRESH_SECRET_MIN_32_CHARACTERS" ]; then
+        log_error "JWT_REFRESH_SECRET 未配置或使用默认值，请修改 .env.production 文件"
+        exit 1
+    fi
+    
+    log_success "环境变量检查通过"
+    
     # 备份当前版本
     backup_current
     
@@ -161,16 +177,60 @@ deploy() {
     log_info "构建Docker镜像..."
     docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" build
     
-    # 运行数据库迁移
-    log_info "运行数据库迁移..."
+    # 启动数据库服务
+    log_info "启动数据库服务..."
     docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d postgres redis
-    sleep 10
+    sleep 15
     
+    # 运行数据库迁移（使用临时容器或已存在的backend容器）
+    log_info "运行数据库迁移..."
+    
+    # 尝试使用已存在的backend容器执行迁移
+    if docker ps -a --format '{{.Names}}' | grep -q "smart-finance-backend-prod"; then
+        # 如果backend容器存在，先启动它
+        docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d backend
+        sleep 10
+        
+        # 等待backend健康检查通过
+        max_attempts=30
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/health 2>/dev/null; then
+                log_success "Backend服务已就绪"
+                break
+            fi
+            attempt=$((attempt + 1))
+            sleep 2
+        done
+    else
+        # 如果backend容器不存在，先创建并启动它（仅用于迁移）
+        docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d --build backend
+        sleep 20
+        
+        # 等待backend健康检查通过
+        max_attempts=40
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/health 2>/dev/null; then
+                log_success "Backend服务已就绪"
+                break
+            fi
+            attempt=$((attempt + 1))
+            log_info "等待Backend服务启动... ($attempt/$max_attempts)"
+            sleep 2
+        done
+    fi
+    
+    # 执行数据库迁移
     docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T backend npm run db:migrate || {
-        log_error "数据库迁移失败"
-        rollback
-        exit 1
+        log_warning "数据库迁移失败，尝试使用npx prisma migrate deploy..."
+        docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T backend npx prisma migrate deploy || {
+            log_error "数据库迁移失败"
+            rollback
+            exit 1
+        }
     }
+    log_success "数据库迁移完成"
     
     # 滚动更新服务
     log_info "更新服务..."
