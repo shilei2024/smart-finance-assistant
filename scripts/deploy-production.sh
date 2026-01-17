@@ -141,7 +141,18 @@ deploy() {
     git fetch origin
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     git checkout main
-    git pull origin main
+    
+    # 检查是否有本地修改
+    if ! git diff-index --quiet HEAD --; then
+        log_warning "检测到本地修改，将暂存这些修改..."
+        git stash save "Deployment local changes $(date +%Y%m%d_%H%M%S)"
+    fi
+    
+    # 拉取最新代码
+    git pull origin main || {
+        log_error "拉取代码失败"
+        exit 1
+    }
     
     # 进入基础设施目录
     cd "$PROJECT_DIR/infrastructure"
