@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # 智能记账助手 - 生产环境部署脚本
-# 使用方法: ./deploy-production.sh [--rollback]
+# 使用方法: 
+#   ./deploy-production.sh              # 默认部署（会从GitHub拉取代码）
+#   ./deploy-production.sh --no-pull    # 跳过Git拉取（直接使用本地代码）
+#   ./deploy-production.sh --rollback   # 回滚到上一个版本
 
 set -e
 
@@ -98,13 +101,19 @@ rollback() {
 health_check() {
     log_info "执行健康检查..."
     
-    max_attempts=30
+    max_attempts=60
     attempt=0
     
     while [ $attempt -lt $max_attempts ]; do
-        if curl -f http://localhost:30080/health &> /dev/null; then
-            log_success "健康检查通过"
-            return 0
+        # 检查nginx是否运行
+        if docker ps --format '{{.Names}}' | grep -q "smart-finance-nginx-prod"; then
+            # 检查健康端点
+            if curl -f http://localhost:8080/api/v1/health &> /dev/null; then
+                log_success "健康检查通过"
+                return 0
+            fi
+        else
+            log_info "等待nginx启动..."
         fi
         
         attempt=$((attempt + 1))
@@ -113,6 +122,8 @@ health_check() {
     done
     
     log_error "健康检查失败"
+    log_info "当前容器状态:"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps 2>/dev/null || true
     return 1
 }
 
@@ -134,14 +145,25 @@ deploy() {
     log_info "检查环境变量配置..."
     source "$ENV_FILE" 2>/dev/null || true
     
-    if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" == "CHANGE_THIS_JWT_SECRET_MIN_32_CHARACTERS" ]; then
-        log_error "JWT_SECRET 未配置或使用默认值，请修改 .env.production 文件"
+    # 检查JWT_SECRET
+    if [ -z "$JWT_SECRET" ]; then
+        log_error "JWT_SECRET 未配置，请修改 .env.production 文件"
         exit 1
     fi
     
-    if [ -z "$JWT_REFRESH_SECRET" ] || [ "$JWT_REFRESH_SECRET" == "CHANGE_THIS_JWT_REFRESH_SECRET_MIN_32_CHARACTERS" ]; then
-        log_error "JWT_REFRESH_SECRET 未配置或使用默认值，请修改 .env.production 文件"
+    # 检查JWT_REFRESH_SECRET
+    if [ -z "$JWT_REFRESH_SECRET" ]; then
+        log_error "JWT_REFRESH_SECRET 未配置，请修改 .env.production 文件"
         exit 1
+    fi
+    
+    # 检查其他关键环境变量，但允许使用默认值
+    if [ -z "$DEEPSEEK_API_KEY" ] || [ "$DEEPSEEK_API_KEY" == "your_deepseek_api_key_here" ]; then
+        log_warning "DEEPSEEK_API_KEY 未配置或使用默认值，AI功能将不可用"
+    fi
+    
+    if [ -z "$SENTRY_DSN" ] || [ "$SENTRY_DSN" == "your_sentry_dsn_here" ]; then
+        log_warning "SENTRY_DSN 未配置或使用默认值，错误监控将不可用"
     fi
     
     log_success "环境变量检查通过"
@@ -152,23 +174,28 @@ deploy() {
     # 进入项目目录
     cd "$PROJECT_DIR"
     
-    # 拉取最新代码
-    log_info "拉取最新代码..."
-    git fetch origin
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    git checkout main
-    
-    # 检查是否有本地修改
-    if ! git diff-index --quiet HEAD --; then
-        log_warning "检测到本地修改，将暂存这些修改..."
-        git stash save "Deployment local changes $(date +%Y%m%d_%H%M%S)"
+    # 根据参数决定是否拉取代码
+    if [ "$1" != "--no-pull" ]; then
+        # 拉取最新代码
+        log_info "拉取最新代码..."
+        git fetch origin
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        git checkout main
+        
+        # 检查是否有本地修改
+        if ! git diff-index --quiet HEAD --; then
+            log_warning "检测到本地修改，将暂存这些修改..."
+            git stash save "Deployment local changes $(date +%Y%m%d_%H%M%S)"
+        fi
+        
+        # 拉取最新代码
+        git pull origin main || {
+            log_error "拉取代码失败"
+            exit 1
+        }
+    else
+        log_info "跳过Git拉取，使用本地代码进行部署..."
     fi
-    
-    # 拉取最新代码
-    git pull origin main || {
-        log_error "拉取代码失败"
-        exit 1
-    }
     
     # 进入基础设施目录
     cd "$PROJECT_DIR/infrastructure"
@@ -195,7 +222,7 @@ deploy() {
         max_attempts=30
         attempt=0
         while [ $attempt -lt $max_attempts ]; do
-            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/health 2>/dev/null; then
+            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/api/v1/health 2>/dev/null; then
                 log_success "Backend服务已就绪"
                 break
             fi
@@ -211,7 +238,7 @@ deploy() {
         max_attempts=40
         attempt=0
         while [ $attempt -lt $max_attempts ]; do
-            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/health 2>/dev/null; then
+            if docker exec smart-finance-backend-prod wget --spider -q http://localhost:3000/api/v1/health 2>/dev/null; then
                 log_success "Backend服务已就绪"
                 break
             fi
@@ -235,8 +262,30 @@ deploy() {
     # 滚动更新服务
     log_info "更新服务..."
     docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d --no-deps --build backend
-    sleep 5
+    sleep 10
+    
+    # 等待backend健康
+    log_info "等待backend服务就绪..."
+    backend_healthy=false
+    for i in {1..30}; do
+        if docker ps --format '{{.Names}} {{.Status}}' | grep "smart-finance-backend-prod" | grep -q "healthy"; then
+            log_success "Backend服务已就绪"
+            backend_healthy=true
+            break
+        fi
+        sleep 2
+    done
+    
+    if [ "$backend_healthy" != "true" ]; then
+        log_warning "Backend服务健康检查超时，继续部署..."
+    fi
+    
     docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d --no-deps --build frontend
+    sleep 10
+    
+    # 启动nginx和其他服务
+    log_info "启动完整服务栈..."
+    docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d
     
     # 健康检查
     if health_check; then
@@ -260,11 +309,17 @@ deploy() {
 
 # 主函数
 main() {
-    if [ "$1" == "--rollback" ]; then
-        rollback
-    else
-        deploy
-    fi
+    case "$1" in
+        --rollback)
+            rollback
+            ;;
+        --no-pull)
+            deploy "--no-pull"
+            ;;
+        *)
+            deploy
+            ;;
+    esac
 }
 
 # 执行
